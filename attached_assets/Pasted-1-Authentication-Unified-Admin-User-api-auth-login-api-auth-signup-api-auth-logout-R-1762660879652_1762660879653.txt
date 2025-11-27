@@ -1,0 +1,40 @@
+1. Authentication (Unified Admin & User)
+•	/api/auth/login, /api/auth/signup, /api/auth/logout
+•	Role-based access (user, admin)
+•	Token-based (JWT or session cookies with HttpOnly)
+•	Two-Factor Authentication (2FA via email/OTP optional)
+•	Password reset and email verification flows
+2. Admin Dashboard
+•	/admin protected route with server-side auth verification
+•	Modules:
+o	Product Management: Add/Edit/Delete products with upload (S3/GCS)
+o	Deal Management: Add festive or anniversary offers
+o	Analytics Overview: logins, purchases, cart abandonment
+o	Product Requests Management
+o	Testimonials CRUD
+o	Newsletter Subscribers List
+Add Product Form:
+•	Image upload, category dropdown, title, description, rating, price, discount, tags, license type (digital), visibility toggle
+3. User Cart & Purchase Flow
+•	Add to Cart: /api/cart/add
+•	Get Cart: /api/cart
+•	Remove Item: /api/cart/remove
+•	Persistent Cart: stored in DB for logged-in users; localStorage for guests.
+•	On logout → clear session cart.
+•	On login → auto-merge guest cart with user cart.
+•	“My Orders” and “Download History” appear after login.
+4. Razorpay Payment Gateway Integration
+•	POST /api/orders/create → creates Razorpay order.
+•	POST /api/payments/verify → verify signature.
+•	POST /api/webhooks/razorpay → confirm payment asynchronously.
+•	Upon success → update orders table and send confirmation email with downloadable link.
+•	Integrate with Razorpay Webhooks for reliability.
+5. Login Analytics
+•	Log all logins → login_events table:
+o	user_id, ip, device, timestamp
+•	Admin Dashboard → visualize via chart.js/recharts.
+6. AI & Automation Enhancements (Backend 2026)
+•	AI Recommendation Engine: suggest products using simple cosine-similarity on category & behavior.
+•	Webhook monitoring: auto alerts on failed payments or server errors (via Discord/Slack webhook).
+•	Auto Backup & Log Rotation: schedule daily DB backups.
+•	Email Automation: confirmation, discount, newsletter workflows.
