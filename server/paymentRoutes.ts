@@ -120,6 +120,24 @@ export function registerPaymentRoutes(app: Express) {
         });
       }
 
+      // Record payment in DB
+      try {
+        await storage.createPayment({
+          orderId: order.id,
+          userId: req.user.userId,
+          provider: "razorpay",
+          providerPaymentId: razorpay_payment_id,
+          providerOrderId: razorpay_order_id,
+          amount: Number(order.totalAmount),
+          currency: "INR",
+          status: "completed",
+          method: req.body.method || undefined,
+          payload: req.body,
+        });
+      } catch (err) {
+        console.warn("Could not record payment:", err);
+      }
+
       await storage.updateOrderStatus(order.id, "completed");
       await storage.reduceStockForOrder(order.id);
       await storage.clearCart(req.user.userId);
@@ -165,6 +183,26 @@ export function registerPaymentRoutes(app: Express) {
         const order = await storage.getOrderByPaymentIntentId(orderId);
 
         if (order && order.status !== "completed") {
+          // Record payment if not already present
+          try {
+            const existing = await storage.getPaymentByProviderPaymentId(paymentId);
+            if (!existing) {
+              await storage.createPayment({
+                orderId: order.id,
+                userId: order.userId,
+                provider: "razorpay",
+                providerPaymentId: paymentId,
+                providerOrderId: orderId,
+                amount: Number(order.totalAmount),
+                currency: "INR",
+                status: "captured",
+                payload: event,
+              });
+            }
+          } catch (err) {
+            console.warn("Failed to record webhook payment:", err);
+          }
+
           await storage.updateOrderStatus(order.id, "completed");
           await storage.reduceStockForOrder(order.id);
           console.log(`✅ Order ${order.id} marked as completed via webhook`);
@@ -175,6 +213,24 @@ export function registerPaymentRoutes(app: Express) {
         const order = await storage.getOrderByPaymentIntentId(orderId);
 
         if (order) {
+          // Record failed payment
+          try {
+            const paymentId = event.payload.payment.entity.id;
+            await storage.createPayment({
+              orderId: order.id,
+              userId: order.userId,
+              provider: "razorpay",
+              providerPaymentId: paymentId,
+              providerOrderId: orderId,
+              amount: Number(order.totalAmount),
+              currency: "INR",
+              status: "failed",
+              payload: event,
+            });
+          } catch (err) {
+            console.warn("Failed to record failed payment via webhook:", err);
+          }
+
           await storage.updateOrderStatus(order.id, "failed");
           console.log(`❌ Order ${order.id} marked as failed via webhook`);
         }

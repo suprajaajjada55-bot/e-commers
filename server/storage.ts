@@ -18,6 +18,8 @@ import type {
   Category, InsertCategory,
   Announcement, InsertAnnouncement,
   PasswordResetToken, InsertPasswordResetToken
+  ,
+  Payment, InsertPayment
 } from "@shared/schema";
 
 const ensureId = <T extends { id?: string }>(entity: T): T & { id: string } => ({
@@ -63,6 +65,9 @@ export interface IStorage {
   createOrder(order: InsertOrder): Promise<Order>;
   createOrderItem(item: InsertOrderItem): Promise<OrderItem>;
   updateOrderStatus(id: string, status: string): Promise<Order | undefined>;
+  createPayment(payment: InsertPayment): Promise<Payment>;
+  getPaymentByProviderPaymentId(providerPaymentId: string): Promise<Payment | undefined>;
+  getPaymentsForOrder(orderId: string): Promise<Payment[]>;
   
   // Admin - Orders
   getAllOrdersWithUsers(): Promise<(Order & { user: User })[]>;
@@ -411,6 +416,28 @@ export class DbStorage implements IStorage {
       .set({ status })
       .where(eq(schema.orders.id, id));
     return await this.getOrder(id);
+  }
+
+  async createPayment(payment: InsertPayment): Promise<Payment> {
+    const values = ensureId(payment);
+    await db.insert(schema.payments).values(values);
+    const newPayment = await selectById<Payment>(schema.payments, values.id);
+    if (!newPayment) {
+      throw new Error("Failed to create payment");
+    }
+    return newPayment;
+  }
+
+  async getPaymentByProviderPaymentId(providerPaymentId: string): Promise<Payment | undefined> {
+    const [payment] = await db.select().from(schema.payments)
+      .where(eq(schema.payments.providerPaymentId, providerPaymentId));
+    return payment;
+  }
+
+  async getPaymentsForOrder(orderId: string): Promise<Payment[]> {
+    return await db.select().from(schema.payments)
+      .where(eq(schema.payments.orderId, orderId))
+      .orderBy(desc(schema.payments.createdAt));
   }
   
   async getAllOrdersWithUsers(): Promise<(Order & { user: User })[]> {

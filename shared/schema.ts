@@ -73,6 +73,25 @@ export const orders = mysqlTable("orders", {
   createdAt: datetime("created_at", { mode: "date" }).notNull().$defaultFn(now),
 });
 
+export const payments = mysqlTable("payments", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(uuid),
+  orderId: varchar("order_id", { length: 36 })
+    .notNull()
+    .references(() => orders.id, { onDelete: "cascade" }),
+  userId: varchar("user_id", { length: 36 })
+    .notNull()
+    .references(() => users.id),
+  provider: varchar("provider", { length: 64 }).notNull().default("razorpay"),
+  providerPaymentId: varchar("provider_payment_id", { length: 191 }),
+  providerOrderId: varchar("provider_order_id", { length: 191 }),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 16 }).notNull().default("INR"),
+  status: varchar("status", { length: 64 }).notNull().default("pending"),
+  method: varchar("method", { length: 64 }),
+  payload: json("payload").$type<Record<string, any> | null>(),
+  createdAt: datetime("created_at", { mode: "date" }).notNull().$defaultFn(now),
+});
+
 export const orderItems = mysqlTable("order_items", {
   id: varchar("id", { length: 36 }).primaryKey().$defaultFn(uuid),
   orderId: varchar("order_id", { length: 36 })
@@ -208,6 +227,9 @@ export const selectCartItemSchema = createSelectSchema(cartItems);
 export const insertOrderSchema = createInsertSchema(orders);
 export const selectOrderSchema = createSelectSchema(orders);
 
+export const insertPaymentSchema = createInsertSchema(payments);
+export const selectPaymentSchema = createSelectSchema(payments);
+
 export const insertOrderItemSchema = createInsertSchema(orderItems);
 export const selectOrderItemSchema = createSelectSchema(orderItems);
 
@@ -256,6 +278,9 @@ export type InsertOrder = z.infer<typeof insertOrderSchema>;
 
 export type OrderItem = typeof orderItems.$inferSelect;
 export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
+
+export type Payment = typeof payments.$inferSelect;
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 
 export type Review = typeof reviews.$inferSelect;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
